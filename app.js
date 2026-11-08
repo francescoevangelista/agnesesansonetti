@@ -31,8 +31,14 @@ if(grid){
   document.querySelector('.archive-count').textContent=entries.filter(e=>!e.hidden).length+' projects';
   if(save){const url=new URL(location.href);if(value==='all')url.searchParams.delete('category');else url.searchParams.set('category',value);history.replaceState(null,'',url)}
  }
- filters.forEach(b=>b.addEventListener('click',()=>filter(b.dataset.filter)));
- filter(new URL(location.href).searchParams.get('category')||'all',false);
+ // First screen: A/S at the centre, the archive below. The docked A/S hides while the large one is visible.
+ const intro=document.querySelector('.archive-intro');
+ const toArchive=(behavior='smooth')=>{if(intro&&scroller.scrollTop<grid.offsetTop-40)scroller.scrollTo({top:grid.offsetTop-20,behavior:reduced.matches?'instant':behavior})};
+ if(intro)new IntersectionObserver(([entry])=>document.body.classList.toggle('intro-visible',entry.isIntersecting),{root:scroller,threshold:.35}).observe(intro.querySelector('.as-mark'));
+ filters.forEach(b=>b.addEventListener('click',()=>{filter(b.dataset.filter);toArchive()}));
+ const initial=new URL(location.href).searchParams.get('category');
+ filter(initial||'all',false);
+ if(initial)toArchive('instant');
  entries.forEach(entry=>{
   const link=entry.querySelector('a');let pointer='mouse';
   link.addEventListener('pointerdown',e=>pointer=e.pointerType);
