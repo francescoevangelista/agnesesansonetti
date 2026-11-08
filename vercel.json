@@ -6,22 +6,7 @@
   "trailingSlash": true,
   "redirects": [
     {
-      "source": "/it",
-      "destination": "/",
-      "permanent": true
-    },
-    {
-      "source": "/en",
-      "destination": "/",
-      "permanent": true
-    },
-    {
       "source": "/it/progetti/:slug",
-      "destination": "/projects/:slug/",
-      "permanent": true
-    },
-    {
-      "source": "/en/projects/:slug",
       "destination": "/projects/:slug/",
       "permanent": true
     }

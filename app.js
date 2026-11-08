@@ -1,5 +1,12 @@
 import {fitBox,zoomAt,constrain} from './board-math.js';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+// Interface text for the page language (Italian at /, English at /en/).
+const T={it:{projects:n=>`${n} progetti`,items:n=>`Tutti i ${n} elementi`,play:'Avvia film',pause:'Pausa film'},en:{projects:n=>`${n} projects`,items:n=>`All ${n} items`,play:'Play film',pause:'Pause film'}}[document.documentElement.lang]||{};
+// IT / EN: remember the choice for a year; the home page middleware reads it.
+document.querySelectorAll('.lang-switch a[data-lang]').forEach(a=>a.addEventListener('click',()=>{
+ document.cookie=`lang=${a.dataset.lang}; Max-Age=31536000; Path=/; SameSite=Lax${location.protocol==='https:'?'; Secure':''}`;
+ if(document.body.dataset.page==='archive'&&location.search){const url=new URL(a.href);url.search=location.search;a.href=url}
+}));
 const about=document.querySelector('.about-panel');
 let aboutTrigger=null,closeTimer;
 function openAbout(trigger){
@@ -28,7 +35,7 @@ if(grid){
   if(!['all','Fashion','Accessories'].includes(value))value='all';
   entries.forEach(e=>{e.hidden=value!=='all'&&e.dataset.category!==value;e.classList.remove('is-revealed')});
   filters.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===value)));
-  document.querySelector('.archive-count').textContent=entries.filter(e=>!e.hidden).length+' projects';
+  document.querySelector('.archive-count').textContent=T.projects(entries.filter(e=>!e.hidden).length);
   if(save){const url=new URL(location.href);if(value==='all')url.searchParams.delete('category');else url.searchParams.set('category',value);history.replaceState(null,'',url)}
  }
  // First screen: A/S at the centre, the archive below. The docked A/S hides while the large one is visible.
@@ -65,7 +72,7 @@ if(viewport){
  const films=cards.flatMap((card,index)=>{const video=card.querySelector('video');return video?[{video,index}]:[]});
  const filmToggle=document.querySelector('[data-film-toggle]');
  let filmPaused=false;
- function updateFilmLabel(){if(filmToggle){const stopped=filmPaused||films.every(({video})=>video.paused);filmToggle.textContent=stopped?'Play film':'Pause film';filmToggle.setAttribute('aria-pressed',String(stopped))}}
+ function updateFilmLabel(){if(filmToggle){const stopped=filmPaused||films.every(({video})=>video.paused);filmToggle.textContent=stopped?T.play:T.pause;filmToggle.setAttribute('aria-pressed',String(stopped))}}
  function syncFilms(){
   films.forEach(({video,index})=>{
    video.muted=true;
@@ -109,9 +116,9 @@ if(viewport){
  }
  function focus(index,animate=true){
   select(index);mode='focus';update(fitBox(rects[index],size,size.width<700?24:36,1.8),{animate});
-  status.textContent=cards[index].querySelector('.board-focus').getAttribute('aria-label').replace(/^Focus (image|film): /,'');
+  status.textContent=cards[index].querySelector('.board-caption').textContent;
  }
- function overview(animate=true){mode='overview';select(-1);update(fitBox(bounds,size,size.width<700?14:24,1),{animate});status.textContent=`All ${cards.length} items`}
+ function overview(animate=true){mode='overview';select(-1);update(fitBox(bounds,size,size.width<700?14:24,1),{animate});status.textContent=T.items(cards.length)}
  function measure(){size={width:viewport.clientWidth,height:viewport.clientHeight};minimum=Math.max(.005,fitBox(bounds,size,14,1).scale*.6)}
  function zoom(factor,point={x:size.width/2,y:size.height/2},animate=false){mode='explore';update(zoomAt(state,factor,point,minimum,3),{animate})}
  measure();overview(false);loadVisible();
@@ -156,5 +163,5 @@ if(viewport){
  detailsButton.addEventListener('click',()=>setDetails(details.hidden));
  details.querySelector('.details-close').addEventListener('click',()=>setDetails(false,true));
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!about.open){if(!details.hidden)setDetails(false,true);else if(mode==='focus')overview()}});
- try{const back=sessionStorage.getItem('archive-return');if(back?.startsWith('/?')||back==='/')document.querySelector('.close-project').href=back}catch{}
+ try{const close=document.querySelector('.close-project'),home=close.getAttribute('href'),back=sessionStorage.getItem('archive-return');if(back===home||back?.startsWith(home+'?'))close.href=back}catch{}
 }
