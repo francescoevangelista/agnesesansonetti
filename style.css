@@ -64,4 +64,38 @@ body.archive-leaving .archive-index,body.archive-leaving .index-peek{transition:
 @media(max-width:700px){.archive-index{gap:6px}.index-link{grid-template-columns:1fr;gap:2px;font-size:clamp(26px,8.4vw,38px)}.index-meta{font-size:11px}.index-peek{top:auto;left:auto;right:var(--gutter);bottom:calc(var(--dock) + 14px);width:46vw;transform:scale(.94);transform-origin:100% 100%}.index-peek.is-on{transform:none}.index-peek img{max-height:30svh;object-position:right bottom}.pseq{inset:12px 0 133px}.details-open .pseq{right:0;bottom:calc(34svh + 145px)}.details-open .project-details{height:34svh}.pseq-index{display:none}.pseq-hud{top:14px;font-size:11px}.pseq-hint{bottom:142px;font-size:10px}.details-open .pseq-hint{left:50%}}
 @media(max-height:500px) and (max-width:700px){.details-open .pseq{bottom:calc(30svh + 145px)}.details-open .project-details{height:30svh}}
 @media(prefers-reduced-motion:reduce){.pseq-hint{display:none}}
-@media print{@page{margin:16mm}html,body{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important;color:#000!important;font-size:10pt}*,*:before,*:after{font-family:Arial,Helvetica,sans-serif!important;text-shadow:none!important;box-shadow:none!important;color:#000!important}.page-grid,.cv-header,.about-panel,.skip-link{display:none!important}.cv{display:block;padding:0;height:auto;overflow:visible}.cv-identity{margin-bottom:25px}.cv-identity h1{font-size:26pt;font-weight:400}.cv-identity h1 br{display:none}.cv-identity>a:first-of-type{margin-top:12px}.cv-group{margin-bottom:24px}.cv-group h2{margin-bottom:15px;break-after:avoid;font-weight:700}.cv-row{display:grid;grid-template-columns:32mm 1fr;break-inside:avoid;gap:16px;margin-bottom:15px}.cv-row h3,.cv-row p{font-size:10pt}.cv-row h3{font-weight:700}.cv-date{font-size:9pt}.cv-identity>a{font-size:10pt}}
+/* CV (phone first): identity and three full-width actions on the first screen, projects with thumbnail and one line of data. */
+.cv-identity .cv-role{font-size:16px;font-weight:500;margin-bottom:4px}
+.cv-identity>p{margin:0}
+.cv-availability{margin-top:14px!important;display:flex;align-items:center;gap:8px}
+.cv-availability:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink)}
+.cv-actions{display:grid;gap:8px;margin-top:28px}
+.cv-action{display:flex;align-items:center;justify-content:center;min-height:52px;border:1px solid var(--ink);background:var(--bg);font-size:14px;font-weight:500;letter-spacing:-.01em;transition:background .2s,color .2s}
+.cv-action:first-child{background:var(--ink);color:var(--bg)}
+.cv-action:focus-visible{text-decoration:none;background:var(--ink);color:var(--bg)}
+@media(hover:hover) and (pointer:fine){.cv-action:hover{background:var(--ink);color:var(--bg)}}
+.cv-qr-open{display:flex;align-items:center;min-height:44px;margin-top:6px;font-size:13px}
+.cv-contact{margin-top:30px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.5}
+.cv-contact a{overflow-wrap:anywhere}
+.cv-site,.cv-print-qr,.cv-project-qr{display:none}
+.cv-projects ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.cv-project a{display:grid;grid-template-columns:72px 1fr;gap:16px;align-items:center;padding:8px 0}
+.cv-project img{width:72px;height:72px;object-fit:cover;background:#000}
+.cv-project-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cv-project-title{font-size:16px;font-weight:500;letter-spacing:-.02em}
+.cv-project-meta{font-size:12px;opacity:.6}
+.cv-project-fact{font-size:13px;line-height:1.4}
+.cv-project a:focus-visible .cv-project-title{text-decoration:underline;text-underline-offset:4px}
+.qr-panel{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:var(--bg);color:#fff}
+.qr-panel::backdrop{background:var(--bg)}
+.qr-panel-body{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;cursor:zoom-out;color:#fff}
+.qr-panel-code{width:min(92vw,80svh);height:auto;display:block}
+.qr-panel-body span{font-size:13px}
+@media(max-width:700px){.cv-identity{margin-bottom:55px}.cv-identity h1{margin-bottom:22px}.cv-project-title{font-size:15px}}
+@media print{@page{size:A4;margin:0}html,body{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important;color:#000!important;font-size:7.6pt}*,*:before,*:after{font-family:Arial,Helvetica,sans-serif!important;text-shadow:none!important;box-shadow:none!important;color:#000!important}.page-grid,.cv-header,.about-panel,.skip-link,.qr-panel,.cv-actions,.cv-qr-open,.cv-project img,.no-script{display:none!important}
+.cv{display:grid!important;grid-template-columns:52mm 1fr;gap:9mm;width:210mm;height:297mm;max-width:none;margin:0;padding:11mm 12mm 8mm;overflow:hidden!important}
+.cv-identity{margin:0}.cv-identity h1{font-size:22pt;font-weight:400;line-height:1;letter-spacing:-.03em;margin-bottom:5mm}.cv-identity .cv-role{font-size:9pt;font-weight:700}.cv-identity>p{font-size:8.5pt;line-height:1.45}.cv-availability{margin-top:2mm!important}.cv-availability:before{background:#000!important;width:5px;height:5px}
+.cv-contact{margin-top:6mm;font-size:8pt;gap:1mm}.cv-site{display:block}.cv-print-qr{display:block;width:26mm;height:26mm;margin-top:6mm;color:#000}
+.cv-group{margin-bottom:3.6mm}.cv-group h2{font-size:8pt;font-weight:700;margin-bottom:2.5mm;break-after:avoid;text-transform:uppercase;letter-spacing:.06em}
+.cv-row{display:grid;grid-template-columns:22mm 1fr;gap:4mm;margin-bottom:2.2mm;break-inside:avoid}.cv-row h3{font-size:8pt;font-weight:700;margin-bottom:.6mm;line-height:1.3}.cv-row p{font-size:7.6pt;line-height:1.35}.cv-row p+p{margin-top:.8mm}.cv-date{font-size:7.2pt;line-height:1.35}
+.cv-projects ul{grid-template-columns:repeat(2,1fr);gap:2.4mm 5mm}.cv-project{display:grid;grid-template-columns:1fr 16mm;gap:2mm;align-items:center;break-inside:avoid}.cv-project a{display:block;padding:0}.cv-project-text{gap:.4mm}.cv-project-title{font-size:8pt;font-weight:700}.cv-project-meta{font-size:7pt;opacity:1}.cv-project-fact{font-size:7.2pt;line-height:1.3}.cv-project-qr{display:block;width:16mm;height:16mm;color:#000}.cv-skills{columns:2;column-gap:6mm}.cv-skills h2{column-span:all}.cv-skills .cv-row{display:block;margin-bottom:1.6mm}.cv-skills .cv-date{display:none}.cv-skills .cv-row h3{margin-bottom:.3mm}}

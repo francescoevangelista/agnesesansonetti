@@ -24,7 +24,9 @@ if(about){
  if(location.hash==='#about')openAbout();
  window.addEventListener('hashchange',()=>{if(location.hash==='#about')openAbout();else if(about.open)closeAbout()});
 }
-document.querySelector('.print-cv')?.addEventListener('click',()=>window.print());
+// CV: the site QR full screen, white on black; a tap anywhere closes it (Esc closes the dialog natively).
+const qrPanel=document.querySelector('.qr-panel');
+if(qrPanel){const opener=document.querySelector('.cv-qr-open');opener.addEventListener('click',()=>qrPanel.showModal());qrPanel.querySelector('[data-qr-close]').addEventListener('click',()=>qrPanel.close());qrPanel.addEventListener('close',()=>opener.focus({preventScroll:true}))}
 const ease='cubic-bezier(.2,.7,.2,1)';
 const fit=(ratio,maxW,maxH)=>{const w=Math.min(maxW,maxH*ratio);return {w,h:w/ratio}};
 const index=document.querySelector('.archive-index');
