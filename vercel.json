@@ -47,7 +47,7 @@
       ]
     },
     {
-      "source": "/cv/(.*)\\.vcf",
+      "source": "/cv/agnese-sansonetti.vcf",
       "headers": [
         {
           "key": "Content-Type",
