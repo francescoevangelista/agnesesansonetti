@@ -32,22 +32,16 @@ const fit=(ratio,maxW,maxH)=>{const w=Math.min(maxW,maxH*ratio);return {w,h:w/ra
 const index=document.querySelector('.archive-index');
 if(index){
  // Home: A/S on the first screen, then the projects as an index of large titles (the same on computer and phone).
- // One title at a time is in light: the one under the pointer, or else the one crossing the reading line (42% of the screen).
- // The others dim and the cover of the title in light appears beside the list (computer) or in the lower corner (phone).
+ // The title under the pointer (or with keyboard focus) stays in light and the others dim. No cover preview.
  const scroller=document.querySelector('.archive');
  const entries=[...index.querySelectorAll('.index-entry')].map(li=>({li,a:li.querySelector('a')}));
  const filters=[...document.querySelectorAll('[data-filter]')];
- const peek=document.querySelector('.index-peek'),peekImg=peek.querySelector('img');
  let hovered=null,active=null;
  function light(entry){
   if(entry===active)return;active=entry;
   entries.forEach(e=>e.li.classList.toggle('is-active',e===entry));index.classList.toggle('has-active',Boolean(entry));
-  if(!entry){peek.classList.remove('is-on');return}
-  peekImg.removeAttribute('srcset');peekImg.src=entry.a.dataset.cover;peekImg.srcset=entry.a.dataset.srcset;peekImg.sizes='(max-width: 700px) 46vw, 26vw';
-  peek.classList.add('is-on');
  }
- const fromScroll=()=>{const line=innerHeight*.42;return entries.find(e=>{if(e.li.hidden)return false;const b=e.li.getBoundingClientRect();return b.top<=line&&b.bottom>=line})||null};
- const update=()=>light(hovered&&!hovered.li.hidden?hovered:fromScroll());
+ const update=()=>light(hovered&&!hovered.li.hidden?hovered:null);
  function filter(value,save=true){
   if(!['all','Fashion','Accessories'].includes(value))value='all';
   entries.forEach(e=>{e.li.hidden=value!=='all'&&e.li.dataset.category!==value});
@@ -61,30 +55,20 @@ if(index){
  const toIndex=(behavior='smooth')=>{if(intro&&scroller.scrollTop<index.offsetTop-40)scroller.scrollTo({top:index.offsetTop-20,behavior:reduced.matches?'instant':behavior})};
  if(intro)new IntersectionObserver(([entry])=>document.body.classList.toggle('intro-visible',entry.isIntersecting),{root:scroller,threshold:.35}).observe(intro.querySelector('.as-mark'));
  filters.forEach(b=>b.addEventListener('click',()=>{filter(b.dataset.filter);toIndex()}));
- let ticking=false;scroller.addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(()=>{ticking=false;update()})}},{passive:true});
- addEventListener('resize',update);
  entries.forEach(e=>{
   e.a.addEventListener('pointerenter',ev=>{if(ev.pointerType==='mouse'){hovered=e;update()}});
   e.a.addEventListener('pointerleave',ev=>{if(ev.pointerType==='mouse'){hovered=null;update()}});
   e.a.addEventListener('focus',()=>{hovered=e;update()});e.a.addEventListener('blur',()=>{hovered=null;update()});
-  // Opening a project: the title goes in light, its cover flies to the centre, then the project page opens.
+  // Opening a project: the title goes in light, the list fades, then the project page opens (its images arrive from depth).
   e.a.addEventListener('click',ev=>{
    hovered=e;update();
    try{sessionStorage.setItem('archive-return',location.pathname+location.search);sessionStorage.setItem('archive-scroll',String(scroller.scrollTop))}catch{}
    if(ev.defaultPrevented||reduced.matches||ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.button!==0)return;
-   ev.preventDefault();
-   const r=peekImg.getBoundingClientRect(),ratio=Number(e.a.dataset.ratio)||r.width/r.height;
-   const fly=new Image();fly.src=peekImg.currentSrc||peekImg.src;fly.alt='';fly.className='cover-fly';
-   Object.assign(fly.style,{left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`});
-   document.body.append(fly);document.body.classList.add('archive-leaving');
-   const {w,h}=fit(ratio,innerWidth*.5,innerHeight*.6);
-   fly.animate([{left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`},{left:`${(innerWidth-w)/2}px`,top:`${(innerHeight-h)/2}px`,width:`${w}px`,height:`${h}px`}],{duration:720,easing:ease,fill:'forwards'}).finished.then(()=>{
-    try{sessionStorage.setItem('cover-arrive',JSON.stringify({src:fly.src,ratio}))}catch{}
-    location.href=e.a.href;
-   });
+   ev.preventDefault();document.body.classList.add('archive-leaving');
+   setTimeout(()=>{location.href=e.a.href},300);
   });
  });
- addEventListener('pageshow',ev=>{if(ev.persisted){document.body.classList.remove('archive-leaving');document.querySelectorAll('.cover-fly').forEach(f=>f.remove());hovered=null;update()}});
+ addEventListener('pageshow',ev=>{if(ev.persisted){document.body.classList.remove('archive-leaving');hovered=null;update()}});
  const initial=new URL(location.href).searchParams.get('category');
  filter(initial||'all',false);
  if(initial)toIndex('instant');
@@ -129,9 +113,18 @@ if(sequence){
  scroller.addEventListener('scroll',()=>{target=Math.min(n-1,Math.max(0,scroller.scrollTop/stepH));hint.classList.add('is-off')},{passive:true});
  const goTo=i=>scroller.scrollTo({top:Math.max(0,Math.min(n-1,i))*stepH,behavior:reduced.matches?'instant':'smooth'});
  ticks.forEach(tk=>tk.addEventListener('click',()=>goTo(Number(tk.dataset.to))));
- scroller.addEventListener('keydown',e=>{
+ // Arrows work from anywhere on the page, not only when the sequence has focus: up/down (and left/right, Page Up/Down)
+ // move one item; with an image enlarged they move to the previous or next image, which stays enlarged.
+ document.addEventListener('keydown',e=>{
+  if(about?.open||e.altKey||e.ctrlKey||e.metaKey||e.target.closest('input,textarea,select,[contenteditable],video'))return;
   const k={ArrowDown:1,ArrowRight:1,PageDown:1,ArrowUp:-1,ArrowLeft:-1,PageUp:-1}[e.key];
-  if(k){e.preventDefault();goTo(Math.round(target)+k)}
+  const onButton=e.target.closest('button,a')&&!e.target.closest('.pseq-item');
+  if(k&&!(onButton&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))){
+   e.preventDefault();
+   if(!focusLayer.hidden){const next=Math.max(0,Math.min(n-1,current+k));if(next!==current){goTo(next);current=-1;target=next;showFocus(items[next])}return}
+   goTo(Math.round(target)+k);return;
+  }
+  if(!focusLayer.hidden)return;
   if(e.key==='Home'){e.preventDefault();goTo(0)}
   if(e.key==='End'){e.preventDefault();goTo(n-1)}
   if(e.key==='Enter'&&e.target===scroller&&current>=0){e.preventDefault();openFocus(items[current])}
@@ -141,14 +134,19 @@ if(sequence){
  items.forEach(d=>d.el.addEventListener('click',()=>{if(d.i!==current){goTo(d.i);return}openFocus(d)}));
  const filmToggle=document.querySelector('[data-film-toggle]');
  const setFilmLabel=()=>{if(filmToggle){filmToggle.textContent=filmPaused?T.play:T.pause;filmToggle.setAttribute('aria-pressed',String(filmPaused))}};
+ // The enlarged view shows the same number as the counter (n / total) next to the caption.
+ function showFocus(d){
+  if(d.media.tagName==='VIDEO'){closeFocus();return}
+  focusImg.src=d.media.dataset.medium;const full=new Image();full.src=d.media.dataset.full;full.decode().then(()=>{if(!focusLayer.hidden&&focusImg.dataset.for===String(d.i))focusImg.src=full.src}).catch(()=>{});
+  focusImg.dataset.for=String(d.i);focusImg.alt=d.media.alt;focusCaption.textContent=`${pad(d.i+1)} / ${pad(n)} — ${d.el.dataset.caption}`;
+ }
  function openFocus(d){
   if(d.media.tagName==='VIDEO'){filmPaused=!d.media.paused;setFilmLabel();return}
-  focusImg.src=d.media.dataset.medium;const full=new Image();full.src=d.media.dataset.full;full.decode().then(()=>{if(!focusLayer.hidden)focusImg.src=full.src}).catch(()=>{});
-  focusImg.alt=d.media.alt;focusCaption.textContent=d.el.dataset.caption;focusLayer.hidden=false;
+  showFocus(d);focusLayer.hidden=false;
   if(!reduced.matches)focusImg.animate([{opacity:0,transform:'scale(.92)'},{opacity:1,transform:'none'}],{duration:300,easing:ease});
   focusLayer.focus({preventScroll:true});
  }
- const closeFocus=()=>{focusLayer.hidden=true;scroller.focus({preventScroll:true})};
+ function closeFocus(){focusLayer.hidden=true;scroller.focus({preventScroll:true})}
  focusLayer.addEventListener('click',closeFocus);
  // Tools: smaller / larger / back to the start / film.
  document.querySelectorAll('[data-board-action]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.boardAction;if(a==='in')zoom=Math.min(1.5,zoom*1.15);if(a==='out')zoom=Math.max(.5,zoom/1.15);if(a==='reset'){zoom=1;goTo(0)}layout()}));
