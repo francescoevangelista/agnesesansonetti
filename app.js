@@ -132,7 +132,7 @@ if(sequence){
  // move one item; with an image enlarged they move to the previous or next image, which stays enlarged.
  document.addEventListener('keydown',e=>{
   if(about?.open||e.altKey||e.ctrlKey||e.metaKey||e.target.closest('input,textarea,select,[contenteditable],video'))return;
-  const k={ArrowDown:1,ArrowRight:1,PageDown:1,ArrowUp:-1,ArrowLeft:-1,PageUp:-1}[e.key];
+  const k={ArrowUp:1,ArrowRight:1,PageDown:1,ArrowDown:-1,ArrowLeft:-1,PageUp:-1}[e.key];
   const onButton=e.target.closest('button,a')&&!e.target.closest('.pseq-item');
   if(k&&!(onButton&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))){
    e.preventDefault();
