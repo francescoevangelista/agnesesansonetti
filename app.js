@@ -1,11 +1,22 @@
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 // Interface text for the page language (Italian at /, English at /en/).
-const T={it:{projects:n=>`${n} progetti`,play:'Avvia film',pause:'Pausa film'},en:{projects:n=>`${n} projects`,play:'Play film',pause:'Pause film'}}[document.documentElement.lang]||{};
+const T={it:{projects:n=>`${n} progetti`,play:'Avvia film',pause:'Pausa film',copied:'Email copiata negli appunti'},en:{projects:n=>`${n} projects`,play:'Play film',pause:'Pause film',copied:'Email copied to clipboard'}}[document.documentElement.lang]||{};
 // IT / EN: remember the choice for a year; the home page middleware reads it.
 document.querySelectorAll('.lang-switch a[data-lang]').forEach(a=>a.addEventListener('click',()=>{
  document.cookie=`lang=${a.dataset.lang}; Max-Age=31536000; Path=/; SameSite=Lax${location.protocol==='https:'?'; Secure':''}`;
  if(document.body.dataset.page==='archive'&&location.search){const url=new URL(a.href);url.search=location.search;a.href=url}
 }));
+// Email: a click copies the address and says so; without clipboard access the link opens the mail app as before.
+let toast,toastTimer;
+function say(text){
+ if(!toast){toast=document.createElement('div');toast.className='copy-toast';toast.setAttribute('role','status');toast.setAttribute('aria-live','polite')}
+ (document.querySelector('dialog[open]')||document.body).append(toast);
+ toast.textContent=text;requestAnimationFrame(()=>toast.classList.add('is-on'));clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('is-on'),2200);
+}
+document.addEventListener('click',e=>{
+ const a=e.target.closest('a[data-copy]');if(!a||!navigator.clipboard?.writeText)return;
+ e.preventDefault();navigator.clipboard.writeText(a.dataset.copy).then(()=>say(T.copied)).catch(()=>{location.href=a.href});
+});
 const about=document.querySelector('.about-panel');
 let aboutTrigger=null,closeTimer;
 function openAbout(trigger){
@@ -88,6 +99,7 @@ if(sequence){
  const count=document.querySelector('.pseq-count'),captionEl=document.querySelector('.pseq-caption'),hint=document.querySelector('.pseq-hint');
  const groups=JSON.parse(scroller.dataset.groups);
  const focusLayer=document.querySelector('.pseq-focus'),focusImg=focusLayer.querySelector('img'),focusCaption=focusLayer.querySelector('.pseq-focus-caption');
+ const focusVideo=document.createElement('video');Object.assign(focusVideo,{muted:true,loop:true,playsInline:true,hidden:true});focusVideo.setAttribute('playsinline','');focusImg.after(focusVideo);
  const items=[...world.querySelectorAll('.pseq-item')].map((el,i)=>({el,i,media:el.querySelector('img,video'),videos:[...el.querySelectorAll('video')],pair:el.classList.contains('is-pair'),group:el.dataset.group,ratio:Number(el.dataset.ratio),opacity:-1,hi:false}));
  // Two films side by side in one step (stacked on a phone): each takes width in proportion to its own ratio.
  for(const d of items)if(d.pair){d.wide=d.ratio;d.tall=1/d.videos.reduce((s,v)=>s+1/Number(v.dataset.ratio),0)*.97}
@@ -134,22 +146,28 @@ if(sequence){
  });
  addEventListener('pointermove',e=>{if(e.pointerType==='mouse')tilt=(e.clientX/innerWidth-.5)*5},{passive:true});
  // Click: the current item enlarges (a film plays or pauses); another item becomes current.
- items.forEach(d=>d.el.addEventListener('click',()=>{if(d.i!==current){goTo(d.i);return}openFocus(d)}));
+ const inside=(el,e)=>{const r=el.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom};
+ items.forEach(d=>d.el.addEventListener('click',e=>{if(d.i!==current&&items[current]&&inside(items[current].el,e))d=items[current];if(d.i!==current){goTo(d.i);return}const v=d.pair?Math.max(0,d.videos.findIndex(x=>inside(x,e))):0;openFocus(d,v)}));
  const filmToggle=document.querySelector('[data-film-toggle]');
  const setFilmLabel=()=>{if(filmToggle){filmToggle.textContent=filmPaused?T.play:T.pause;filmToggle.setAttribute('aria-pressed',String(filmPaused))}};
  // The enlarged view shows the same number as the counter (n / total) next to the caption.
- function showFocus(d){
-  if(d.media.tagName==='VIDEO'){closeFocus();return}
+ function showFocus(d,v=0){
+  const cap=`${pad(d.i+1)} / ${pad(n)} — ${d.el.dataset.caption}`;
+  if(d.videos.length){
+   const src=d.videos[Math.min(v,d.videos.length-1)];
+   focusImg.hidden=true;focusImg.removeAttribute('src');focusVideo.hidden=false;focusVideo.poster=src.poster;focusVideo.src=src.dataset.video;focusVideo.setAttribute('aria-label',src.getAttribute('aria-label')||'');focusVideo.play().catch(()=>{});
+   focusCaption.textContent=d.pair?`${pad(d.i+1)} / ${pad(n)} — ${src.getAttribute('aria-label')}`:cap;return;
+  }
+  focusVideo.pause();focusVideo.hidden=true;focusVideo.removeAttribute('src');focusImg.hidden=false;
   focusImg.src=d.media.dataset.medium;const full=new Image();full.src=d.media.dataset.full;full.decode().then(()=>{if(!focusLayer.hidden&&focusImg.dataset.for===String(d.i))focusImg.src=full.src}).catch(()=>{});
-  focusImg.dataset.for=String(d.i);focusImg.alt=d.media.alt;focusCaption.textContent=`${pad(d.i+1)} / ${pad(n)} — ${d.el.dataset.caption}`;
+  focusImg.dataset.for=String(d.i);focusImg.alt=d.media.alt;focusCaption.textContent=cap;
  }
- function openFocus(d){
-  if(d.media.tagName==='VIDEO'){filmPaused=!d.media.paused;setFilmLabel();return}
-  showFocus(d);focusLayer.hidden=false;
-  if(!reduced.matches)focusImg.animate([{opacity:0,transform:'scale(.92)'},{opacity:1,transform:'none'}],{duration:300,easing:ease});
+ function openFocus(d,v=0){
+  showFocus(d,v);focusLayer.hidden=false;
+  if(!reduced.matches)(focusVideo.hidden?focusImg:focusVideo).animate([{opacity:0,transform:'scale(.92)'},{opacity:1,transform:'none'}],{duration:300,easing:ease});
   focusLayer.focus({preventScroll:true});
  }
- function closeFocus(){focusLayer.hidden=true;scroller.focus({preventScroll:true})}
+ function closeFocus(){focusLayer.hidden=true;focusVideo.pause();focusVideo.removeAttribute('src');focusVideo.load();scroller.focus({preventScroll:true})}
  focusLayer.addEventListener('click',closeFocus);
  // Tools: smaller / larger / back to the start / film.
  document.querySelectorAll('[data-board-action]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.boardAction;if(a==='in')zoom=Math.min(1.5,zoom*1.15);if(a==='out')zoom=Math.max(.5,zoom/1.15);if(a==='reset'){zoom=1;goTo(0)}layout()}));
@@ -181,7 +199,7 @@ if(sequence){
    const o=depth>PERSPECTIVE*.8?0:smooth(-SPACING*4.2,-SPACING*2.2,depth)*(1-smooth(SPACING*.3,SPACING*.7,depth));
    if(Math.abs(o-d.opacity)>.02){d.opacity=o;d.el.style.opacity=o.toFixed(2);d.el.style.pointerEvents=o<.3?'none':'';d.el.classList.toggle('is-hidden',o<=0)}
    if(!d.hi&&d.media.tagName==='IMG'&&Math.abs(pos-d.i)<2.2){d.hi=true;const big=new Image();big.src=d.media.dataset.medium;big.decode().then(()=>{d.media.src=big.src}).catch(()=>{})}
-   if(d.videos.length){const near=Math.abs(pos-d.i)<1.4&&!filmPaused&&!document.hidden&&!about?.open;for(const v of d.videos){if(near&&v.paused)v.play().catch(()=>{});if(!near&&!v.paused)v.pause()}}
+   if(d.videos.length){const near=Math.abs(pos-d.i)<1.4&&!filmPaused&&!document.hidden&&!about?.open&&focusLayer.hidden;for(const v of d.videos){if(near&&v.paused)v.play().catch(()=>{});if(!near&&!v.paused)v.pause()}}
   }
   const c=Math.round(Math.min(n-1,Math.max(0,target)));
   if(c!==current){
