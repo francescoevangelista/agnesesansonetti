@@ -88,7 +88,9 @@ if(sequence){
  const count=document.querySelector('.pseq-count'),captionEl=document.querySelector('.pseq-caption'),hint=document.querySelector('.pseq-hint');
  const groups=JSON.parse(scroller.dataset.groups);
  const focusLayer=document.querySelector('.pseq-focus'),focusImg=focusLayer.querySelector('img'),focusCaption=focusLayer.querySelector('.pseq-focus-caption');
- const items=[...world.querySelectorAll('.pseq-item')].map((el,i)=>({el,i,media:el.querySelector('img,video'),group:el.dataset.group,ratio:Number(el.dataset.ratio),opacity:-1,hi:false}));
+ const items=[...world.querySelectorAll('.pseq-item')].map((el,i)=>({el,i,media:el.querySelector('img,video'),videos:[...el.querySelectorAll('video')],pair:el.classList.contains('is-pair'),group:el.dataset.group,ratio:Number(el.dataset.ratio),opacity:-1,hi:false}));
+ // Two films side by side in one step (stacked on a phone): each takes width in proportion to its own ratio.
+ for(const d of items)if(d.pair){d.wide=d.ratio;d.tall=1/d.videos.reduce((s,v)=>s+1/Number(v.dataset.ratio),0)*.97}
  const n=items.length;
  let W=0,H=0,stepH=1,zoom=1,pos=reduced.matches?0:-3.2,target=0,current=-1,tiltX=0,tilt=0,filmPaused=false;
  // Deterministic placement: films centred, then images alternating sides, process pages further out and smaller.
@@ -100,8 +102,9 @@ if(sequence){
   stage.style.marginBottom=`${-H}px`;
   const narrow=W<700;
   for(const d of items){
+   if(d.pair){d.ratio=narrow?d.tall:d.wide;d.el.classList.toggle('is-stacked',narrow);d.videos.forEach(v=>{const r=Number(v.dataset.ratio);v.style.flex=`${narrow?1/r:r} 1 0`})}
    const share=d.group==='film'?.62:d.group==='main'?.68:.48;
-   const {w,h}=fit(d.ratio,W*(narrow?.86:d.group==='film'?.7:.5)*zoom,H*share*zoom);
+   const {w,h}=fit(d.ratio,W*(narrow?.86:d.pair?.9:d.group==='film'?.7:.5)*zoom,H*(d.pair&&narrow?.72:share)*zoom);
    d.x=d.side*W*(narrow?.06:d.group==='process'?.24:.17);d.y=d.jitter*H*.05;
    d.el.style.width=`${w}px`;d.el.style.height=`${h}px`;
    d.el.style.transform=`translate3d(${d.x}px,${d.y}px,${-d.i*SPACING}px) translate(-50%,-50%)`;
@@ -172,13 +175,13 @@ if(sequence){
  function frame(){
   pos+=(target-pos)*(reduced.matches?1:.11);
   tiltX+=(tilt-tiltX)*.06;
-  world.style.transform=`translateZ(${pos*SPACING}px) rotateY(${tiltX}deg)`;
+  world.style.transform=`rotateY(${tiltX}deg) translateZ(${pos*SPACING}px)`;
   for(const d of items){
    const depth=(pos-d.i)*SPACING;
    const o=depth>PERSPECTIVE*.8?0:smooth(-SPACING*4.2,-SPACING*2.2,depth)*(1-smooth(SPACING*.3,SPACING*.7,depth));
    if(Math.abs(o-d.opacity)>.02){d.opacity=o;d.el.style.opacity=o.toFixed(2);d.el.style.pointerEvents=o<.3?'none':'';d.el.classList.toggle('is-hidden',o<=0)}
    if(!d.hi&&d.media.tagName==='IMG'&&Math.abs(pos-d.i)<2.2){d.hi=true;const big=new Image();big.src=d.media.dataset.medium;big.decode().then(()=>{d.media.src=big.src}).catch(()=>{})}
-   if(d.media.tagName==='VIDEO'){const near=Math.abs(pos-d.i)<1.4&&!filmPaused&&!document.hidden&&!about?.open;if(near&&d.media.paused)d.media.play().catch(()=>{});if(!near&&!d.media.paused)d.media.pause()}
+   if(d.videos.length){const near=Math.abs(pos-d.i)<1.4&&!filmPaused&&!document.hidden&&!about?.open;for(const v of d.videos){if(near&&v.paused)v.play().catch(()=>{});if(!near&&!v.paused)v.pause()}}
   }
   const c=Math.round(Math.min(n-1,Math.max(0,target)));
   if(c!==current){
